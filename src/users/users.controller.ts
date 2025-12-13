@@ -12,7 +12,9 @@ import {
     ValidationPipe,
     UsePipes,
     Logger,
+
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { QueryUsersDto, UpdateUserDto, UserListDto } from './dto';
 import { UserDto } from '../auth/dto/user.dto';
@@ -25,7 +27,9 @@ import { UserRole } from '../generated/prisma';
  * UsersController - Handles all HTTP requests for user management
  * All routes are protected with JWT authentication and role-based authorization
  */
+@ApiTags('Users')
 @Controller('users')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
     private readonly logger = new Logger(UsersController.name);
@@ -44,6 +48,9 @@ export class UsersController {
      * @returns Paginated list of users
      */
     @Get()
+    @ApiOperation({ summary: 'Get all users with pagination and search (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Paginated list of users retrieved successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.OK)
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -65,6 +72,11 @@ export class UsersController {
      * @returns User without password
      */
     @Get(':id')
+    @ApiOperation({ summary: 'Get a single user by ID' })
+    @ApiParam({ name: 'id', description: 'User ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User cannot view other profiles' })
+    @ApiResponse({ status: 404, description: 'User not found' })
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string, @Request() req: any): Promise<UserDto> {
         this.logger.log(
@@ -84,6 +96,11 @@ export class UsersController {
      * @returns Updated user without password
      */
     @Put(':id')
+    @ApiOperation({ summary: 'Update a user' })
+    @ApiParam({ name: 'id', description: 'User ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'User updated successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User cannot update other profiles or roles' })
+    @ApiResponse({ status: 404, description: 'User not found' })
     @HttpCode(HttpStatus.OK)
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     async update(

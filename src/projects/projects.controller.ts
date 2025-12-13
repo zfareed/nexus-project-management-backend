@@ -11,7 +11,9 @@ import {
     HttpCode,
     HttpStatus,
     Logger,
+
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, UpdateProjectDto, AssignUsersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,7 +25,9 @@ import { UserRole } from '../generated/prisma';
  * ProjectsController - Handles all HTTP requests for projects
  * All routes are protected with JWT authentication
  */
+@ApiTags('Projects')
 @Controller('projects')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProjectsController {
     private readonly logger = new Logger(ProjectsController.name);
@@ -36,6 +40,9 @@ export class ProjectsController {
      * Only ADMINs can create projects
      */
     @Post()
+    @ApiOperation({ summary: 'Create a new project (Admin only)' })
+    @ApiResponse({ status: 201, description: 'Project created successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() createProjectDto: CreateProjectDto, @Request() req: any) {
@@ -50,6 +57,8 @@ export class ProjectsController {
      * - USERs see only projects they are assigned to
      */
     @Get()
+    @ApiOperation({ summary: 'Get all projects', description: 'Admins see all projects, Users see only assigned projects.' })
+    @ApiResponse({ status: 200, description: 'Projects retrieved successfully' })
     @HttpCode(HttpStatus.OK)
     async findAll(@Request() req: any) {
         this.logger.log(`Fetching all projects for user: ${req.user.userId}`);
@@ -63,6 +72,10 @@ export class ProjectsController {
      * - USERs can only view projects they are assigned to
      */
     @Get(':id')
+    @ApiOperation({ summary: 'Get a project by ID' })
+    @ApiParam({ name: 'id', description: 'Project ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Project retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Project not found' })
     @HttpCode(HttpStatus.OK)
     async findOne(@Param('id') id: string, @Request() req: any) {
         this.logger.log(`Fetching project: ${id} for user: ${req.user.userId}`);
@@ -75,6 +88,10 @@ export class ProjectsController {
      * Only ADMINs can update projects
      */
     @Put(':id')
+    @ApiOperation({ summary: 'Update a project (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Project ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Project updated successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.OK)
     async update(
@@ -92,6 +109,10 @@ export class ProjectsController {
      * Only ADMINs can delete projects
      */
     @Delete(':id')
+    @ApiOperation({ summary: 'Delete a project (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Project ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Project deleted successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.OK)
     async remove(@Param('id') id: string, @Request() req: any) {
@@ -105,6 +126,10 @@ export class ProjectsController {
      * Only ADMINs can assign users
      */
     @Post(':id/assign-users')
+    @ApiOperation({ summary: 'Assign users to a project (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Project ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Users assigned successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.OK)
     async assignUsers(
@@ -122,6 +147,10 @@ export class ProjectsController {
      * Only ADMINs can remove users
      */
     @Post(':id/remove-users')
+    @ApiOperation({ summary: 'Remove users from a project (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Project ID (UUID)' })
+    @ApiResponse({ status: 200, description: 'Users removed successfully' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User role not permitted' })
     @Roles(UserRole.ADMIN)
     @HttpCode(HttpStatus.OK)
     async removeUsers(

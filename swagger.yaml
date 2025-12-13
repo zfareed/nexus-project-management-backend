@@ -1,0 +1,1915 @@
+openapi: 3.0.3
+info:
+  title: Nexus Project Management API
+  description: |
+    RESTful API for the Nexus Project Management System.
+    
+    ## Authentication
+    This API uses JWT (JSON Web Token) for authentication. After registering or logging in, 
+    you will receive a JWT token that must be included in the `Authorization` header for all 
+    protected endpoints.
+    
+    ## Authorization
+    The API implements role-based access control (RBAC) with two roles:
+    - **ADMIN**: Full access to all resources
+    - **USER**: Limited access to assigned resources only
+    
+    ## Features
+    - User authentication and management
+    - Project management with team assignments
+    - Task management with status tracking
+    - Role-based authorization
+    - Pagination and search capabilities
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@nexus-pm.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.nexus-pm.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User registration, login, and profile endpoints
+  - name: Projects
+    description: Project management endpoints
+  - name: Tasks
+    description: Task management endpoints
+  - name: Users
+    description: User management endpoints (Admin only)
+
+# ============================================
+# SECURITY SCHEMES
+# ============================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from login or register endpoints.
+        
+        Example: `Authorization: Bearer <your_jwt_token>`
+
+  # ============================================
+  # REUSABLE SCHEMAS
+  # ============================================
+  schemas:
+    # ========== ENUMS ==========
+    UserRole:
+      type: string
+      enum:
+        - ADMIN
+        - USER
+      description: User role for authorization
+
+    TaskStatus:
+      type: string
+      enum:
+        - TODO
+        - IN_PROGRESS
+        - DONE
+      description: Current status of a task
+
+    TaskPriority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+      description: Priority level of a task
+
+    # ========== AUTH SCHEMAS ==========
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: John Doe
+          description: User's full name
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+          description: User's email address (must be unique)
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+          example: SecurePass123!
+          description: User's password (will be hashed)
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+          description: User's email address
+        password:
+          type: string
+          format: password
+          example: SecurePass123!
+          description: User's password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          description: JWT token for authentication
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: Unique user identifier
+        name:
+          type: string
+          example: John Doe
+          description: User's full name
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+          description: User's email address
+        role:
+          $ref: '#/components/schemas/UserRole'
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Last update timestamp
+
+    # ========== PROJECT SCHEMAS ==========
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Website Redesign
+          description: Project name
+        description:
+          type: string
+          example: Complete redesign of the company website
+          description: Detailed project description
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example: ["550e8400-e29b-41d4-a716-446655440000"]
+          description: Array of user IDs to assign to the project
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Website Redesign v2
+          description: Updated project name
+        description:
+          type: string
+          example: Complete redesign with new branding
+          description: Updated project description
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example: ["550e8400-e29b-41d4-a716-446655440000"]
+          description: Updated array of assigned user IDs
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: Unique project identifier
+        name:
+          type: string
+          example: Website Redesign
+          description: Project name
+        description:
+          type: string
+          nullable: true
+          example: Complete redesign of the company website
+          description: Project description
+        createdById:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: ID of the user who created the project
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Project creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Last update timestamp
+        createdBy:
+          $ref: '#/components/schemas/User'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectUser'
+          description: Users assigned to this project
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+          description: Tasks belonging to this project
+
+    ProjectUser:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+          description: Project ID
+        userId:
+          type: string
+          format: uuid
+          description: User ID
+        user:
+          $ref: '#/components/schemas/User'
+
+    AssignUsersRequest:
+      type: object
+      required:
+        - userIds
+      properties:
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          example: ["550e8400-e29b-41d4-a716-446655440000", "660e8400-e29b-41d4-a716-446655440001"]
+          description: Array of user IDs to assign or remove
+
+    # ========== TASK SCHEMAS ==========
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - projectId
+        - assigneeId
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: Implement user authentication
+          description: Task title
+        description:
+          type: string
+          example: Implement JWT-based authentication system
+          description: Detailed task description
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: string
+          format: date-time
+          example: 2024-02-01T00:00:00Z
+          description: Task deadline (ISO 8601 format)
+        projectId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: ID of the project this task belongs to
+        assigneeId:
+          type: string
+          format: uuid
+          example: 660e8400-e29b-41d4-a716-446655440001
+          description: ID of the user assigned to this task
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: Implement user authentication with OAuth
+          description: Updated task title
+        description:
+          type: string
+          example: Implement JWT and OAuth authentication
+          description: Updated task description
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: string
+          format: date-time
+          example: 2024-02-15T00:00:00Z
+          description: Updated task deadline
+        assigneeId:
+          type: string
+          format: uuid
+          example: 660e8400-e29b-41d4-a716-446655440001
+          description: Updated assignee ID
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: Unique task identifier
+        title:
+          type: string
+          example: Implement user authentication
+          description: Task title
+        description:
+          type: string
+          nullable: true
+          example: Implement JWT-based authentication system
+          description: Task description
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2024-02-01T00:00:00Z
+          description: Task deadline
+        projectId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+          description: Associated project ID
+        assigneeId:
+          type: string
+          format: uuid
+          example: 660e8400-e29b-41d4-a716-446655440001
+          description: Assigned user ID
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Task creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: Last update timestamp
+        project:
+          $ref: '#/components/schemas/Project'
+        assignee:
+          $ref: '#/components/schemas/User'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskHistory'
+          description: Task change history
+
+    TaskHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique history record identifier
+        taskId:
+          type: string
+          format: uuid
+          description: Associated task ID
+        updatedById:
+          type: string
+          format: uuid
+          description: ID of user who made the change
+        oldStatus:
+          $ref: '#/components/schemas/TaskStatus'
+        newStatus:
+          $ref: '#/components/schemas/TaskStatus'
+        oldPriority:
+          $ref: '#/components/schemas/TaskPriority'
+        newPriority:
+          $ref: '#/components/schemas/TaskPriority'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:30:00Z
+          description: When the change occurred
+        updatedBy:
+          $ref: '#/components/schemas/User'
+
+    # ========== USER MANAGEMENT SCHEMAS ==========
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: Jane Doe
+          description: Updated user name
+        role:
+          $ref: '#/components/schemas/UserRole'
+          description: Updated user role (Admin only)
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: Array of users
+        total:
+          type: integer
+          example: 42
+          description: Total number of users matching the query
+        page:
+          type: integer
+          example: 1
+          description: Current page number
+        limit:
+          type: integer
+          example: 10
+          description: Number of items per page
+        totalPages:
+          type: integer
+          example: 5
+          description: Total number of pages
+
+    # ========== ERROR SCHEMAS ==========
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+          description: HTTP status code
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          example: Validation failed
+          description: Error message or array of messages
+        error:
+          type: string
+          example: Bad Request
+          description: Error type
+
+    UnauthorizedError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 401
+        message:
+          type: string
+          example: Unauthorized
+        error:
+          type: string
+          example: Unauthorized
+
+    ForbiddenError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 403
+        message:
+          type: string
+          example: Forbidden resource
+        error:
+          type: string
+          example: Forbidden
+
+    NotFoundError:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: Resource not found
+        error:
+          type: string
+          example: Not Found
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+paths:
+  # ========== AUTHENTICATION ENDPOINTS ==========
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Create a new user account with email and password.
+        
+        - Email must be unique
+        - Password is automatically hashed using bcrypt
+        - Default role is USER
+        - Returns user information and JWT token
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              newUser:
+                summary: New user registration
+                value:
+                  name: John Doe
+                  email: john.doe@example.com
+                  password: SecurePass123!
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  summary: Successful registration
+                  value:
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      name: John Doe
+                      email: john.doe@example.com
+                      role: USER
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-15T10:30:00Z"
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                validationError:
+                  summary: Validation failed
+                  value:
+                    statusCode: 400
+                    message:
+                      - "Name must be at least 2 characters long"
+                      - "Password must be at least 8 characters long"
+                    error: Bad Request
+                emailExists:
+                  summary: Email already registered
+                  value:
+                    statusCode: 400
+                    message: Email already exists
+                    error: Bad Request
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with email and password
+      description: |
+        Authenticate user with email and password.
+        
+        - Validates user credentials
+        - Checks password hash using bcrypt
+        - Returns user information and JWT token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              adminLogin:
+                summary: Admin login
+                value:
+                  email: admin@nexus.com
+                  password: Admin123!
+              userLogin:
+                summary: User login
+                value:
+                  email: john.doe@example.com
+                  password: SecurePass123!
+      responses:
+        '200':
+          description: Successfully logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  summary: Successful login
+                  value:
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      name: John Doe
+                      email: john.doe@example.com
+                      role: USER
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-15T10:30:00Z"
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+              examples:
+                invalidPassword:
+                  summary: Invalid password
+                  value:
+                    statusCode: 401
+                    message: Invalid credentials
+                    error: Unauthorized
+                userNotFound:
+                  summary: User not found
+                  value:
+                    statusCode: 401
+                    message: Invalid credentials
+                    error: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: |
+        Retrieve the authenticated user's profile information.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** All authenticated users
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                userProfile:
+                  summary: User profile
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    name: John Doe
+                    email: john.doe@example.com
+                    role: USER
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ========== PROJECT ENDPOINTS ==========
+  /projects:
+    post:
+      tags:
+        - Projects
+      summary: Create a new project
+      description: |
+        Create a new project with optional user assignments.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can create projects
+        - Creator is automatically recorded
+        - Users can be assigned during creation
+      operationId: createProject
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            examples:
+              basicProject:
+                summary: Basic project
+                value:
+                  name: Website Redesign
+                  description: Complete redesign of the company website
+              projectWithUsers:
+                summary: Project with assigned users
+                value:
+                  name: Mobile App Development
+                  description: New iOS and Android mobile application
+                  userIds:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                    - 660e8400-e29b-41d4-a716-446655440001
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+              examples:
+                notAdmin:
+                  summary: User is not an admin
+                  value:
+                    statusCode: 403
+                    message: Forbidden resource
+                    error: Forbidden
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Projects
+      summary: Get all projects
+      description: |
+        Retrieve all projects based on user role.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can view all projects in the system
+        - **USER**: Can only view projects they are assigned to
+      operationId: getAllProjects
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+              examples:
+                adminView:
+                  summary: Admin view (all projects)
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      name: Website Redesign
+                      description: Complete redesign of the company website
+                      createdById: 770e8400-e29b-41d4-a716-446655440002
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-15T10:30:00Z"
+                    - id: 660e8400-e29b-41d4-a716-446655440001
+                      name: Mobile App
+                      description: iOS and Android app
+                      createdById: 770e8400-e29b-41d4-a716-446655440002
+                      createdAt: "2024-01-16T09:00:00Z"
+                      updatedAt: "2024-01-16T09:00:00Z"
+                userView:
+                  summary: User view (assigned projects only)
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      name: Website Redesign
+                      description: Complete redesign of the company website
+                      createdById: 770e8400-e29b-41d4-a716-446655440002
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get a project by ID
+      description: |
+        Retrieve a single project by its ID.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can view any project
+        - **USER**: Can only view projects they are assigned to
+      operationId: getProjectById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Project retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              examples:
+                project:
+                  summary: Project details
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    name: Website Redesign
+                    description: Complete redesign of the company website
+                    createdById: 770e8400-e29b-41d4-a716-446655440002
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User not assigned to this project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Projects
+      summary: Update a project
+      description: |
+        Update an existing project.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can update projects
+        - All fields are optional (partial update)
+      operationId: updateProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+            examples:
+              updateName:
+                summary: Update project name
+                value:
+                  name: Website Redesign v2.0
+              updateDescription:
+                summary: Update description
+                value:
+                  description: Complete redesign with new branding guidelines
+              updateAll:
+                summary: Update multiple fields
+                value:
+                  name: Website & Mobile Redesign
+                  description: Complete redesign across all platforms
+                  userIds:
+                    - 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Projects
+      summary: Delete a project
+      description: |
+        Delete a project by ID.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can delete projects
+        - Cascading delete: All associated tasks will be deleted
+      operationId: deleteProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Project deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Project deleted successfully
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /projects/{id}/assign-users:
+    post:
+      tags:
+        - Projects
+      summary: Assign users to a project
+      description: |
+        Add users to a project team.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can assign users
+        - Existing assignments are not duplicated
+      operationId: assignUsersToProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUsersRequest'
+            examples:
+              assignMultiple:
+                summary: Assign multiple users
+                value:
+                  userIds:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                    - 660e8400-e29b-41d4-a716-446655440001
+              assignSingle:
+                summary: Assign single user
+                value:
+                  userIds:
+                    - 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Users assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /projects/{id}/remove-users:
+    post:
+      tags:
+        - Projects
+      summary: Remove users from a project
+      description: |
+        Remove users from a project team.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can remove users
+        - Users are unassigned from the project
+      operationId: removeUsersFromProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Project ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUsersRequest'
+            examples:
+              removeMultiple:
+                summary: Remove multiple users
+                value:
+                  userIds:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                    - 660e8400-e29b-41d4-a716-446655440001
+      responses:
+        '200':
+          description: Users removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ========== TASK ENDPOINTS ==========
+  /tasks:
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: |
+        Create a new task within a project.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can create tasks
+        - Task must be assigned to a project and a user
+        - Default status is TODO, default priority is MEDIUM
+      operationId: createTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              basicTask:
+                summary: Basic task with required fields
+                value:
+                  title: Implement user authentication
+                  projectId: 550e8400-e29b-41d4-a716-446655440000
+                  assigneeId: 660e8400-e29b-41d4-a716-446655440001
+              fullTask:
+                summary: Task with all fields
+                value:
+                  title: Design database schema
+                  description: Create ERD and implement Prisma schema
+                  status: TODO
+                  priority: HIGH
+                  dueDate: "2024-02-01T00:00:00Z"
+                  projectId: 550e8400-e29b-41d4-a716-446655440000
+                  assigneeId: 660e8400-e29b-41d4-a716-446655440001
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Project or assignee not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Tasks
+      summary: Get all tasks
+      description: |
+        Retrieve all tasks based on user role.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can view all tasks in the system
+        - **USER**: Can only view tasks assigned to them
+      operationId: getAllTasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+              examples:
+                tasks:
+                  summary: List of tasks
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      title: Implement user authentication
+                      description: JWT-based authentication
+                      status: IN_PROGRESS
+                      priority: HIGH
+                      dueDate: "2024-02-01T00:00:00Z"
+                      projectId: 770e8400-e29b-41d4-a716-446655440002
+                      assigneeId: 660e8400-e29b-41d4-a716-446655440001
+                      createdAt: "2024-01-15T10:30:00Z"
+                      updatedAt: "2024-01-16T14:20:00Z"
+                    - id: 660e8400-e29b-41d4-a716-446655440001
+                      title: Design database schema
+                      description: Create ERD
+                      status: TODO
+                      priority: MEDIUM
+                      dueDate: null
+                      projectId: 770e8400-e29b-41d4-a716-446655440002
+                      assigneeId: 880e8400-e29b-41d4-a716-446655440003
+                      createdAt: "2024-01-15T11:00:00Z"
+                      updatedAt: "2024-01-15T11:00:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tasks/{id}:
+    get:
+      tags:
+        - Tasks
+      summary: Get a task by ID
+      description: |
+        Retrieve a single task by its ID.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can view any task
+        - **USER**: Can only view tasks assigned to them
+      operationId: getTaskById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Task retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              examples:
+                task:
+                  summary: Task details
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    title: Implement user authentication
+                    description: JWT-based authentication system
+                    status: IN_PROGRESS
+                    priority: HIGH
+                    dueDate: "2024-02-01T00:00:00Z"
+                    projectId: 770e8400-e29b-41d4-a716-446655440002
+                    assigneeId: 660e8400-e29b-41d4-a716-446655440001
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-16T14:20:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - Task not assigned to this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Tasks
+      summary: Update a task
+      description: |
+        Update an existing task.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can update any task
+        - **USER**: Can only update tasks assigned to them
+        
+        - All fields are optional (partial update)
+        - Status and priority changes are tracked in task history
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              updateStatus:
+                summary: Update task status
+                value:
+                  status: IN_PROGRESS
+              updatePriority:
+                summary: Update task priority
+                value:
+                  priority: HIGH
+              updateMultiple:
+                summary: Update multiple fields
+                value:
+                  title: Implement OAuth authentication
+                  description: Add OAuth 2.0 and JWT authentication
+                  status: IN_PROGRESS
+                  priority: HIGH
+                  dueDate: "2024-02-15T00:00:00Z"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - Task not assigned to this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete a task
+      description: |
+        Delete a task by ID.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can delete tasks
+        - Cascading delete: All associated task history will be deleted
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Task deleted successfully
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ========== USER MANAGEMENT ENDPOINTS ==========
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users with pagination and search
+      description: |
+        Retrieve all users with pagination and optional search.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** ADMIN only
+        
+        - Only admins can list all users
+        - Passwords are excluded from the response
+        - Supports pagination and search by name or email
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          example: 10
+        - name: search
+          in: query
+          description: Search query for name or email (case-insensitive)
+          required: false
+          schema:
+            type: string
+          example: john
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              examples:
+                paginatedUsers:
+                  summary: Paginated user list
+                  value:
+                    users:
+                      - id: 550e8400-e29b-41d4-a716-446655440000
+                        name: John Doe
+                        email: john.doe@example.com
+                        role: USER
+                        createdAt: "2024-01-15T10:30:00Z"
+                        updatedAt: "2024-01-15T10:30:00Z"
+                      - id: 660e8400-e29b-41d4-a716-446655440001
+                        name: Jane Smith
+                        email: jane.smith@example.com
+                        role: ADMIN
+                        createdAt: "2024-01-14T09:00:00Z"
+                        updatedAt: "2024-01-14T09:00:00Z"
+                    total: 42
+                    page: 1
+                    limit: 10
+                    totalPages: 5
+                searchResults:
+                  summary: Search results
+                  value:
+                    users:
+                      - id: 550e8400-e29b-41d4-a716-446655440000
+                        name: John Doe
+                        email: john.doe@example.com
+                        role: USER
+                        createdAt: "2024-01-15T10:30:00Z"
+                        updatedAt: "2024-01-15T10:30:00Z"
+                    total: 1
+                    page: 1
+                    limit: 10
+                    totalPages: 1
+        '400':
+          description: Validation error (invalid query parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User role not permitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get a user by ID
+      description: |
+        Retrieve a single user by their ID.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can view any user
+        - **USER**: Can only view their own profile
+        
+        - Password is excluded from the response
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                user:
+                  summary: User details
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    name: John Doe
+                    email: john.doe@example.com
+                    role: USER
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User cannot view this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+              examples:
+                notOwnProfile:
+                  summary: User trying to view another user's profile
+                  value:
+                    statusCode: 403
+                    message: You can only view your own profile
+                    error: Forbidden
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Users
+      summary: Update a user
+      description: |
+        Update an existing user.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:**
+        - **ADMIN**: Can update name and role for any user
+        - **USER**: Can only update their own name (cannot change role)
+        
+        - All fields are optional (partial update)
+        - Password cannot be updated through this endpoint
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            examples:
+              updateName:
+                summary: Update user name (any user)
+                value:
+                  name: Jane Doe
+              updateRole:
+                summary: Update user role (admin only)
+                value:
+                  role: ADMIN
+              updateBoth:
+                summary: Update name and role (admin only)
+                value:
+                  name: Jane Doe
+                  role: ADMIN
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                updatedUser:
+                  summary: Updated user
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    name: Jane Doe
+                    email: john.doe@example.com
+                    role: ADMIN
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-20T15:45:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '403':
+          description: Forbidden - User cannot update this profile or role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+              examples:
+                notOwnProfile:
+                  summary: User trying to update another user
+                  value:
+                    statusCode: 403
+                    message: You can only update your own profile
+                    error: Forbidden
+                userChangingRole:
+                  summary: Regular user trying to change role
+                  value:
+                    statusCode: 403
+                    message: Only admins can change user roles
+                    error: Forbidden
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
