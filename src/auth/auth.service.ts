@@ -4,12 +4,14 @@ import {
     InternalServerErrorException,
     UnauthorizedException,
     Logger,
+    NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { UserDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -145,5 +147,36 @@ export class AuthService {
                 updatedAt: true,
             },
         });
+    }
+
+    async getCurrentUser(userId: string): Promise<UserDto> {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            return user;
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+
+            this.logger.error('Error fetching current user', error);
+            throw new InternalServerErrorException(
+                'An error occurred while fetching user information',
+            );
+        }
     }
 }
