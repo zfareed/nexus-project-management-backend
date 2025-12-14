@@ -54,6 +54,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 export const TaskStatus: {
   TODO: 'TODO',
   IN_PROGRESS: 'IN_PROGRESS',
+  REVIEW: 'REVIEW',
   DONE: 'DONE'
 };
 

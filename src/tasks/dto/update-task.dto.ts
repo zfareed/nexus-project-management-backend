@@ -30,7 +30,7 @@ export class UpdateTaskDto {
         enum: TaskStatus,
         example: TaskStatus.IN_PROGRESS,
     })
-    @IsEnum(TaskStatus, { message: 'Status must be one of: TODO, IN_PROGRESS, DONE' })
+    @IsEnum(TaskStatus, { message: 'Status must be one of: TODO, IN_PROGRESS, REVIEW, DONE' })
     @IsOptional()
     status?: TaskStatus;
 

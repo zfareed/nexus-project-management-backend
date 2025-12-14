@@ -29,7 +29,7 @@ export class CreateTaskDto {
         enum: TaskStatus,
         example: TaskStatus.TODO,
     })
-    @IsEnum(TaskStatus, { message: 'Status must be one of: TODO, IN_PROGRESS, DONE' })
+    @IsEnum(TaskStatus, { message: 'Status must be one of: TODO, IN_PROGRESS, REVIEW, DONE' })
     @IsOptional()
     status?: TaskStatus;
 

@@ -1,26 +1,31 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole, TaskStatus } from '../generated/prisma';
 
 @Injectable()
 export class DashboardService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) { }
 
-    async getDashboardStats(userId: string) {
-        // 1. Get IDs of projects user is involved in (either created or assigned)
-        // We could just count them directly
+    async getDashboardStats(userId: string, role: string) {
+        // Define filters based on role
+        const isAdmin = role === UserRole.ADMIN;
+
+        const projectWhere = isAdmin ? {} : {
+            OR: [
+                { createdById: userId },
+                { users: { some: { userId: userId } } },
+            ],
+        };
+
+        const taskWhere: any = isAdmin ? {} : { assigneeId: userId };
+
+        // 1. Get projects count
         const projectsCount = await this.prisma.project.count({
-            where: {
-                OR: [
-                    { createdById: userId },
-                    { users: { some: { userId: userId } } },
-                ],
-            },
+            where: projectWhere,
         });
 
         // 2. Tasks Statistics
-        // Get all tasks assigned to the user
-        // We can run these in parallel for performance
         const [
             totalAssignedTasks,
             completedTasksCount,
@@ -29,39 +34,39 @@ export class DashboardService {
             tasksByStatus,
             tasksByPriority
         ] = await Promise.all([
-            // Total Assigned
+            // Total Tasks
             this.prisma.task.count({
-                where: { assigneeId: userId }
+                where: taskWhere
             }),
             // Completed
             this.prisma.task.count({
-                where: { assigneeId: userId, status: 'DONE' }
+                where: { ...taskWhere, status: TaskStatus.DONE }
             }),
             // Pending (Not Done)
             this.prisma.task.count({
                 where: {
-                    assigneeId: userId,
-                    status: { not: 'DONE' }
+                    ...taskWhere,
+                    status: { not: TaskStatus.DONE }
                 }
             }),
             // Overdue (Not Done and Due Date < Now)
             this.prisma.task.count({
                 where: {
-                    assigneeId: userId,
-                    status: { not: 'DONE' },
+                    ...taskWhere,
+                    status: { not: TaskStatus.DONE },
                     dueDate: { lt: new Date() }
                 }
             }),
             // Distribution by Status
             this.prisma.task.groupBy({
                 by: ['status'],
-                where: { assigneeId: userId },
+                where: taskWhere,
                 _count: { status: true }
             }),
             // Distribution by Priority
             this.prisma.task.groupBy({
                 by: ['priority'],
-                where: { assigneeId: userId },
+                where: taskWhere,
                 _count: { priority: true }
             })
         ]);

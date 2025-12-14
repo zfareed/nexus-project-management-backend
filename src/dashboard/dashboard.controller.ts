@@ -20,6 +20,6 @@ export class DashboardController {
         type: DashboardStatsDto
     })
     async getStats(@Request() req): Promise<DashboardStatsDto> {
-        return this.dashboardService.getDashboardStats(req.user.userId);
+        return this.dashboardService.getDashboardStats(req.user.userId, req.user.role);
     }
 }
