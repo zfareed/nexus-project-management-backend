@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength, IsEnum, IsDateString } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsEnum, IsDateString, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatus, TaskPriority } from '../../generated/prisma';
 
@@ -51,4 +51,22 @@ export class UpdateTaskDto {
     @IsDateString({}, { message: 'Due date must be a valid ISO 8601 date string' })
     @IsOptional()
     dueDate?: string;
+
+    @ApiPropertyOptional({
+        description: 'ID of the project this task belongs to',
+        example: '123e4567-e89b-12d3-a456-426614174000',
+    })
+    @IsString()
+    @IsUUID()
+    @IsOptional()
+    projectId?: string;
+
+    @ApiPropertyOptional({
+        description: 'ID of the user assigned to this task',
+        example: '123e4567-e89b-12d3-a456-426614174000',
+    })
+    @IsString()
+    @IsUUID()
+    @IsOptional()
+    assigneeId?: string;
 }

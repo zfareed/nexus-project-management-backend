@@ -231,6 +231,26 @@ export class TasksService {
             throw new ForbiddenException('You can only update tasks assigned to you');
         }
 
+        // Verify project existence if updating
+        if (updateTaskDto.projectId) {
+            const project = await this.prisma.project.findUnique({
+                where: { id: updateTaskDto.projectId },
+            });
+            if (!project) {
+                throw new NotFoundException(`Project with ID ${updateTaskDto.projectId} not found`);
+            }
+        }
+
+        // Verify assignee existence if updating
+        if (updateTaskDto.assigneeId) {
+            const assignee = await this.prisma.user.findUnique({
+                where: { id: updateTaskDto.assigneeId },
+            });
+            if (!assignee) {
+                throw new NotFoundException(`User with ID ${updateTaskDto.assigneeId} not found`);
+            }
+        }
+
         // Update the task
         const updatedTask = await this.prisma.task.update({
             where: { id },
@@ -242,6 +262,8 @@ export class TasksService {
                 ...(updateTaskDto.dueDate !== undefined && {
                     dueDate: updateTaskDto.dueDate ? new Date(updateTaskDto.dueDate) : null,
                 }),
+                ...(updateTaskDto.projectId && { projectId: updateTaskDto.projectId }),
+                ...(updateTaskDto.assigneeId && { assigneeId: updateTaskDto.assigneeId }),
             },
             include: {
                 project: {
