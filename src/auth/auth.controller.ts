@@ -63,4 +63,17 @@ export class AuthController {
     async getCurrentUser(@Request() req: RequestWithUser): Promise<UserDto> {
         return this.authService.getCurrentUser(req.user.userId);
     }
+
+    @Post('logout')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Logout user' })
+    @ApiResponse({ status: 200, description: 'User successfully logged out' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async logout(@Request() req: RequestWithUser) {
+        // Since we are using stateless JWTs, the server doesn't need to invalidate anything.
+        // The client is responsible for discarding the token.
+        return { message: 'Logged out successfully' };
+    }
 }

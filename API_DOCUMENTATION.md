@@ -71,6 +71,7 @@ The API implements role-based access control (RBAC) with two roles:
 | POST | `/auth/register` | Register a new user | No | - |
 | POST | `/auth/login` | Login with credentials | No | - |
 | GET | `/auth/me` | Get current user profile | Yes | All |
+| POST | `/auth/logout` | Logout user | Yes | All |
 
 ### Project Endpoints
 
