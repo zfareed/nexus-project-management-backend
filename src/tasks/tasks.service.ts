@@ -75,17 +75,7 @@ export class TasksService {
             },
         });
 
-        // Create task history entry
-        await this.prisma.taskHistory.create({
-            data: {
-                taskId: task.id,
-                updatedById: userId,
-                oldStatus: null,
-                newStatus: task.status,
-                oldPriority: null,
-                newPriority: task.priority,
-            },
-        });
+
 
         this.logger.log(`Task created successfully: ${task.id}`);
         return {
@@ -171,20 +161,7 @@ export class TasksService {
                         role: true,
                     },
                 },
-                history: {
-                    include: {
-                        updatedBy: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            },
-                        },
-                    },
-                    orderBy: {
-                        timestamp: 'desc',
-                    },
-                },
+
             },
         });
 
@@ -282,19 +259,7 @@ export class TasksService {
             },
         });
 
-        // Create task history entry if status or priority changed
-        if (updateTaskDto.status || updateTaskDto.priority) {
-            await this.prisma.taskHistory.create({
-                data: {
-                    taskId: id,
-                    updatedById: userId,
-                    oldStatus: updateTaskDto.status ? existingTask.status : null,
-                    newStatus: updateTaskDto.status || existingTask.status,
-                    oldPriority: updateTaskDto.priority ? existingTask.priority : null,
-                    newPriority: updateTaskDto.priority || existingTask.priority,
-                },
-            });
-        }
+
 
         this.logger.log(`Task updated successfully: ${id}`);
         return {

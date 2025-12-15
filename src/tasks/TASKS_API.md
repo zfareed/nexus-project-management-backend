@@ -245,38 +245,7 @@ Authorization: Bearer <jwt_token>
       "email": "john@example.com",
       "role": "USER"
     },
-    "history": [
-      {
-        "id": "history-uuid-1",
-        "taskId": "550e8400-e29b-41d4-a716-446655440000",
-        "updatedById": "admin-uuid",
-        "oldStatus": "TODO",
-        "newStatus": "IN_PROGRESS",
-        "oldPriority": null,
-        "newPriority": "HIGH",
-        "timestamp": "2025-12-14T05:00:00.000Z",
-        "updatedBy": {
-          "id": "admin-uuid",
-          "name": "Admin User",
-          "email": "admin@example.com"
-        }
-      },
-      {
-        "id": "history-uuid-2",
-        "taskId": "550e8400-e29b-41d4-a716-446655440000",
-        "updatedById": "admin-uuid",
-        "oldStatus": null,
-        "newStatus": "TODO",
-        "oldPriority": null,
-        "newPriority": "MEDIUM",
-        "timestamp": "2025-12-14T03:20:28.000Z",
-        "updatedBy": {
-          "id": "admin-uuid",
-          "name": "Admin User",
-          "email": "admin@example.com"
-        }
-      }
-    ]
+
   }
 }
 ```
@@ -457,14 +426,7 @@ TODO → IN_PROGRESS → DONE
 - **MEDIUM**: Standard priority (default)
 - **HIGH**: Urgent, important tasks
 
-## Task History Tracking
 
-The system automatically tracks changes to task status and priority:
-
-- When a task is created, a history entry is created
-- When status or priority is updated, a new history entry is added
-- History includes who made the change and when
-- Old and new values are recorded for audit purposes
 
 ## Testing with cURL
 
@@ -522,4 +484,4 @@ curl -X DELETE http://localhost:3000/tasks/YOUR_TASK_ID \
 3. **Cascading Deletes**: When a project is deleted, all associated tasks are deleted
 4. **Restrict Deletes**: When a user is deleted, tasks assigned to them cannot be deleted (will throw an error)
 5. **Automatic Timestamps**: `createdAt` and `updatedAt` are managed automatically
-6. **History Tracking**: Status and priority changes are logged to the task_history table
+

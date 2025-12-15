@@ -17,7 +17,7 @@ async function main() {
   // Clean existing data
   // -------------------------
   console.log('🧹 Cleaning existing data...');
-  await prisma.taskHistory.deleteMany();
+
   await prisma.task.deleteMany();
   await prisma.projectUsers.deleteMany();
   await prisma.project.deleteMany();
@@ -146,31 +146,7 @@ async function main() {
   });
   console.log(`✅ Created ${4} tasks`);
 
-  // -------------------------
-  // Create task history
-  // -------------------------
-  console.log('📜 Creating task history...');
-  await prisma.taskHistory.createMany({
-    data: [
-      {
-        taskId: task1.id,
-        updatedById: user2.id,
-        oldStatus: 'TODO',
-        newStatus: 'IN_PROGRESS',
-        oldPriority: 'MEDIUM',
-        newPriority: 'HIGH',
-        timestamp: new Date('2025-12-13T10:00:00Z'),
-      },
-      {
-        taskId: task2.id,
-        updatedById: user1.id,
-        oldStatus: 'IN_PROGRESS',
-        newStatus: 'DONE',
-        timestamp: new Date('2025-12-13T08:30:00Z'),
-      },
-    ],
-  });
-  console.log(`✅ Created task history entries`);
+
 
   // -------------------------
   // Summary
@@ -183,7 +159,7 @@ async function main() {
   console.log(`   - Projects: ${await prisma.project.count()}`);
   console.log(`   - Project Assignments: ${await prisma.projectUsers.count()}`);
   console.log(`   - Tasks: ${await prisma.task.count()}`);
-  console.log(`   - Task History: ${await prisma.taskHistory.count()}`);
+
 }
 
 main()

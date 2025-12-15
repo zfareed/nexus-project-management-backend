@@ -401,42 +401,9 @@ components:
           $ref: '#/components/schemas/Project'
         assignee:
           $ref: '#/components/schemas/User'
-        history:
-          type: array
-          items:
-            $ref: '#/components/schemas/TaskHistory'
-          description: Task change history
 
-    TaskHistory:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique history record identifier
-        taskId:
-          type: string
-          format: uuid
-          description: Associated task ID
-        updatedById:
-          type: string
-          format: uuid
-          description: ID of user who made the change
-        oldStatus:
-          $ref: '#/components/schemas/TaskStatus'
-        newStatus:
-          $ref: '#/components/schemas/TaskStatus'
-        oldPriority:
-          $ref: '#/components/schemas/TaskPriority'
-        newPriority:
-          $ref: '#/components/schemas/TaskPriority'
-        timestamp:
-          type: string
-          format: date-time
-          example: 2024-01-15T10:30:00Z
-          description: When the change occurred
-        updatedBy:
-          $ref: '#/components/schemas/User'
+
+
 
     # ========== USER MANAGEMENT SCHEMAS ==========
     UpdateUserRequest:
@@ -1483,7 +1450,7 @@ paths:
         - **USER**: Can only update tasks assigned to them
         
         - All fields are optional (partial update)
-        - Status and priority changes are tracked in task history
+
       operationId: updateTask
       security:
         - BearerAuth: []
@@ -1569,7 +1536,7 @@ paths:
         **Authorization:** ADMIN only
         
         - Only admins can delete tasks
-        - Cascading delete: All associated task history will be deleted
+
       operationId: deleteTask
       security:
         - BearerAuth: []

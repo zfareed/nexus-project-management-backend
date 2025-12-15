@@ -64,11 +64,7 @@ The Tasks CRUD endpoints have been successfully implemented with full JWT authen
 - **AssigneeId**: Valid UUID, must exist
 - **DueDate**: Optional ISO 8601 date string
 
-### 3. Automatic Task History
-- Tracks when a task is created
-- Logs status changes
-- Logs priority changes
-- Records who made the change and when
+
 
 ### 4. Relations
 - Tasks belong to a **Project**
@@ -97,23 +93,7 @@ model Task {
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
   project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee User          @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
-  history  TaskHistory[]
-}
 
-model TaskHistory {
-  id          String        @id @default(uuid())
-  taskId      String        @map("task_id")
-  updatedById String        @map("updated_by_id")
-  oldStatus   TaskStatus?   @map("old_status")
-  newStatus   TaskStatus    @map("new_status")
-  oldPriority TaskPriority? @map("old_priority")
-  newPriority TaskPriority? @map("new_priority")
-  timestamp   DateTime      @default(now())
-
-  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  updatedBy User @relation(fields: [updatedById], references: [id], onDelete: Restrict)
-}
 ```
 
 ## 🧪 Testing Examples
@@ -167,11 +147,7 @@ UPDATE    UPDATE    DELETE (Admin)
 (User)    (User)
 ```
 
-### History Tracking
-Every significant change creates a history entry:
-- Task creation
-- Status changes
-- Priority changes
+
 
 ## 🚀 Next Steps
 
