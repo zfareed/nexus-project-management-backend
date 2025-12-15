@@ -43,29 +43,7 @@
 │ createdAt            │
 │ updatedAt            │
 └──────────────────────┘
-        │
-        │ (1:M)
-        │
-        ▼
-┌──────────────────────┐
-│    TaskHistory       │
-│──────────────────────│
-│ id (PK)              │
-│ taskId (FK)          │──────┐
-│ updatedById (FK)     │──────┼──┐
-│ oldStatus (enum?)    │      │  │
-│ newStatus (enum)     │      │  │
-│ oldPriority (enum?)  │      │  │
-│ newPriority (enum?)  │      │  │
-│ timestamp            │      │  │
-└──────────────────────┘      │  │
-   INDEXES:                   │  │
-   - taskId                   │  │
-   - updatedById              │  │
-   - timestamp                │  │
-                              │  │
-   CASCADE ON DELETE ─────────┘  │
-   RESTRICT ON DELETE ───────────┘
+
 ```
 
 ## Relationship Summary
@@ -74,7 +52,7 @@
 - **1:M** with Project (as creator) - `projectsCreated`
 - **M:N** with Project (as member) - `projectsAssigned` (via ProjectUsers)
 - **1:M** with Task (as assignee) - `tasksAssigned`
-- **1:M** with TaskHistory (as updater) - `taskHistories`
+
 
 ### Project Relationships
 - **M:1** with User (creator) - `createdBy` - **CASCADE DELETE**
@@ -89,11 +67,7 @@
 ### Task Relationships
 - **M:1** with Project - `project` - **CASCADE DELETE**
 - **M:1** with User (assignee) - `assignee` - **RESTRICT DELETE**
-- **1:M** with TaskHistory - `history`
 
-### TaskHistory Relationships
-- **M:1** with Task - `task` - **CASCADE DELETE**
-- **M:1** with User (updater) - `updatedBy` - **RESTRICT DELETE**
 
 ## Delete Behaviors
 
@@ -101,11 +75,11 @@
 - Delete User → Deletes their Projects
 - Delete Project → Deletes all Tasks in project
 - Delete Project → Deletes all ProjectUsers entries
-- Delete Task → Deletes all TaskHistory entries
+
 
 ### RESTRICT (prevents deletion if references exist)
 - Cannot delete User if they have Tasks assigned
-- Cannot delete User if they have TaskHistory entries
+
 
 ## Enums
 
@@ -149,10 +123,7 @@ HIGH   - High priority
 - `priority` - Filter by priority
 - `dueDate` - Sort/filter by due date
 
-### TaskHistory
-- `taskId` - Find history for a task
-- `updatedById` - Find changes by user
-- `timestamp` - Sort chronologically
+
 
 ## Data Flow Examples
 
@@ -163,18 +134,13 @@ HIGH   - High priority
 3. Users can now create/view Tasks in Project
 ```
 
-### 2. Update a Task
-```
-1. User updates Task status/priority
-2. System creates TaskHistory entry
-3. Old and new values are recorded
-```
+
 
 ### 3. Delete a Project
 ```
 1. Project is deleted
 2. CASCADE → All Tasks in project deleted
-3. CASCADE → All TaskHistory for those tasks deleted
+
 4. CASCADE → All ProjectUsers entries deleted
 ```
 
@@ -186,7 +152,7 @@ If user has Tasks assigned:
 If user has no Tasks but created Projects:
   ✅ Projects are CASCADE deleted
      → Tasks in those projects CASCADE deleted
-     → TaskHistory CASCADE deleted
+
      → ProjectUsers CASCADE deleted
 ```
 
@@ -198,7 +164,7 @@ If user has no Tasks but created Projects:
 | Project      | projects       |
 | ProjectUsers | project_users  |
 | Task         | tasks          |
-| TaskHistory  | task_history   |
+
 
 ## Column Mapping
 
@@ -210,15 +176,11 @@ Prisma uses camelCase in code, snake_case in database:
 | updatedAt    | updated_at       |
 | createdById  | created_by_id    |
 | assigneeId   | assignee_id      |
-| updatedById  | updated_by_id    |
 | projectId    | project_id       |
 | userId       | user_id          |
 | taskId       | task_id          |
 | dueDate      | due_date         |
-| oldStatus    | old_status       |
-| newStatus    | new_status       |
-| oldPriority  | old_priority     |
-| newPriority  | new_priority     |
+
 
 ---
 
@@ -226,5 +188,5 @@ This schema provides a **solid foundation** for a project management system with
 ✅ Proper relationships
 ✅ Data integrity via constraints
 ✅ Performance via indexes
-✅ Audit trail via TaskHistory
+
 ✅ Flexible permissions via UserRoles

@@ -280,7 +280,7 @@ curl -X PUT http://localhost:3000/tasks/880e8400-e29b-41d4-a716-446655440003 \
   "updatedAt": "string (date-time)",
   "project": "Project",
   "assignee": "User",
-  "history": "TaskHistory[]"
+
 }
 ```
 
