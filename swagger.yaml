@@ -43,6 +43,8 @@ tags:
     description: Task management endpoints
   - name: Users
     description: User management endpoints (Admin only)
+  - name: Dashboard
+    description: Dashboard statistics endpoints
 
 # ============================================
 # SECURITY SCHEMES
@@ -56,7 +58,7 @@ components:
       description: |
         JWT token obtained from login or register endpoints.
         
-        Example: `Authorization: Bearer <your_jwt_token>`
+        Example: `Authorization: <your_jwt_token>`
 
   # ============================================
   # REUSABLE SCHEMAS
@@ -103,14 +105,14 @@ components:
         email:
           type: string
           format: email
-          example: john.doe@example.com
+          example: admin@demo.com
           description: User's email address (must be unique)
         password:
           type: string
           format: password
           minLength: 8
           maxLength: 100
-          example: SecurePass123!
+          example: admin@123
           description: User's password (will be hashed)
 
     LoginRequest:
@@ -443,6 +445,69 @@ components:
           type: integer
           example: 5
           description: Total number of pages
+
+    # ========== DASHBOARD SCHEMAS ==========
+    DashboardOverview:
+      type: object
+      properties:
+        totalProjects:
+          type: integer
+          example: 3
+          description: Total number of projects involved in
+        tasksCompleted:
+          type: integer
+          example: 12
+          description: Number of completed tasks
+        completionRate:
+          type: number
+          example: 75.5
+          description: Task completion rate as a percentage
+        pendingTasks:
+          type: integer
+          example: 4
+          description: Number of pending tasks
+        overdueTasks:
+          type: integer
+          example: 1
+          description: Number of overdue tasks
+
+    TaskStatusDistribution:
+      type: object
+      properties:
+        status:
+          type: string
+          example: TODO
+          description: Task status
+        count:
+          type: integer
+          example: 5
+          description: Count of tasks with this status
+
+    TaskPriorityDistribution:
+      type: object
+      properties:
+        priority:
+          type: string
+          example: HIGH
+          description: Task priority
+        count:
+          type: integer
+          example: 3
+          description: Count of tasks with this priority
+
+    DashboardStats:
+      type: object
+      properties:
+        overview:
+          $ref: '#/components/schemas/DashboardOverview'
+        taskStatusDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskStatusDistribution'
+        taskPriorityDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskPriorityDistribution'
 
     # ========== ERROR SCHEMAS ==========
     Error:
@@ -1874,6 +1939,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ========== DASHBOARD ENDPOINTS ==========
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard statistics
+      description: |
+        Retrieve dashboard statistics for the logged-in user.
+        
+        **Authentication Required:** Yes (JWT)
+        
+        **Authorization:** All authenticated users
+      operationId: getDashboardStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
         '500':
           description: Internal server error
           content:

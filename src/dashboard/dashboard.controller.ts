@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 
 @ApiTags('Dashboard')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('dashboard')
 export class DashboardController {
     constructor(private readonly dashboardService: DashboardService) { }

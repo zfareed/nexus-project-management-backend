@@ -31,7 +31,7 @@ async function bootstrap() {
 ## Authentication
 This API uses JWT (JSON Web Token) for authentication. After registering or logging in, 
 you will receive a JWT token. Click the "Authorize" button and enter your token in the format:
-\`Bearer <your_jwt_token>\`
+\`<your_jwt_token>\`
 
 ## Authorization
 The API implements role-based access control (RBAC) with two roles:
